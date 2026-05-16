@@ -96,17 +96,42 @@ export default function Dashboard() {
     downloadAnchorNode.remove();
   };
 
+  const importData = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const raw = JSON.parse(event.target.result);
+        // Look for the backup key in the total rescue file
+        const backupKey = Object.keys(raw).find(k => k.startsWith('tkd_backup_'));
+        if (backupKey) {
+          const stateData = JSON.parse(raw[backupKey]);
+          dispatch({ type: 'LOAD', state: stateData });
+          alert("✅ SUCCESS: 96 Athletes Restored! Wait 5 seconds for them to sync to the cloud.");
+        } else {
+          alert("❌ Error: This file doesn't seem to have tournament data.");
+        }
+      } catch (err) {
+        alert("❌ Error reading backup file.");
+      }
+    };
+    reader.readAsText(file);
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6 no-print">
         <h2 className="text-3xl font-black tracking-tight" style={{ fontFamily: 'var(--font-mono)' }}>DASHBOARD</h2>
         <div className="flex gap-2">
+          <label className="brutal-btn grad-green text-[10px] py-2 px-4 border-2 cursor-pointer">
+            IMPORT FROM BACKUP
+            <input type="file" className="hidden" onChange={importData} accept=".json" />
+          </label>
           <button onClick={exportData} className="brutal-btn grad-amber text-[10px] py-2 px-4 border-2">
-            EMERGENCY BACKUP (DOWNLOAD FILE)
+            EMERGENCY BACKUP
           </button>
-          <button onClick={() => window.location.reload()} className="brutal-btn brutal-btn-white text-[10px] py-2 px-4">
-            FORCE CLOUD REFRESH
-          </button>
+
 
           <button onClick={seedTestData} className="brutal-btn brutal-btn-black text-[10px] py-2 px-4">
             SEED TEST DATA (50 PLAYERS)
