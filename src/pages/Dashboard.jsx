@@ -52,6 +52,7 @@ export default function Dashboard() {
   const seedTestData = () => {
     const clubs = ['Red Dragons', 'Blue Tigers', 'Golden Eagles', 'White Cobras', 'Iron Fists'];
     const divisions = [
+      { age: 'Pee-Wee (Under 7)', gender: 'Male', weight: 18, wc: 'Under 20kg' },
       { age: 'Senior (18+)', gender: 'Male', weight: 54, wc: 'Under 54kg' },
       { age: 'Senior (18+)', gender: 'Male', weight: 58, wc: 'Under 58kg' },
       { age: 'Junior (15-17)', gender: 'Female', weight: 46, wc: 'Under 46kg' },

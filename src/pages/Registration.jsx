@@ -45,6 +45,7 @@ export default function Registration() {
               <select className="brutal-select" value={form.age}
                 onChange={e => setForm({ ...form, age: e.target.value })} required>
                 <option value="">Select</option>
+                <option value="Pee-Wee (Under 7)">Pee-Wee (Under 7)</option>
                 <option value="Sub-Junior (Under 12)">Sub-Junior (Under 12)</option>
                 <option value="Cadet (12-14)">Cadet (12-14)</option>
                 <option value="Junior (15-17)">Junior (15-17)</option>
