@@ -8,27 +8,55 @@ export default function Registration() {
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState([]);
 
-  const handleImageScan = async (e) => {
+  const handleFileScan = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     setScanning(true);
     
     try {
-      const { data: { text } } = await Tesseract.recognize(file, 'eng');
+      let text = '';
+      if (file.type === 'application/pdf') {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const content = await page.getTextContent();
+          text += content.items.map(item => item.str).join(' ') + '\n';
+        }
+      } else {
+        const res = await window.Tesseract.recognize(file, 'eng');
+        text = res.data.text;
+      }
+
       const lines = text.split('\n').filter(l => l.trim().length > 5);
       
       // Simple parser: Name, Club, Weight
       const found = lines.map(line => {
-        const parts = line.split(/[,\s]+/).filter(p => p.length > 1);
+        // Try to be smarter about extracting names and weights
+        const parts = line.trim().split(/\s+/);
+        const weightPart = parts.find(p => !isNaN(parseFloat(p)) && parseFloat(p) > 10 && parseFloat(p) < 150);
+        let nameParts = [];
+        let clubParts = [];
+        
+        let foundWeight = false;
+        parts.forEach(p => {
+            if (p === weightPart || (weightPart && p.includes(weightPart))) {
+                foundWeight = true;
+            } else if (!foundWeight && isNaN(p)) {
+                if (nameParts.length < 2) nameParts.push(p);
+                else clubParts.push(p);
+            }
+        });
+
         return {
-          name: parts[0] || 'Unknown',
-          club: parts[1] || 'Club',
-          weight: parts.find(p => !isNaN(p)) || '50'
+          name: nameParts.join(' ') || 'Unknown',
+          club: clubParts.join(' ') || 'Club',
+          weight: weightPart ? parseFloat(weightPart) : 50
         };
       });
       setScanResult(found);
     } catch (err) {
-      alert("Error scanning image: " + err.message);
+      alert("Error scanning file: " + err.message);
     }
     setScanning(false);
   };
@@ -72,11 +100,11 @@ export default function Registration() {
           {scanning && <span className="animate-pulse text-xs font-bold">SCANNING IMAGE...</span>}
         </div>
         <div className="p-6">
-          <p className="text-xs mb-4">Upload a photo of your handwritten or printed list. The AI will try to extract names and weights.</p>
+          <p className="text-xs mb-4">Upload a PDF or Photo of your list. The AI will extract names and weights.</p>
           <div className="flex gap-4">
             <label className="brutal-btn brutal-btn-white flex-1 text-center cursor-pointer">
-              {scanning ? "Processing..." : "SELECT PHOTO OF LIST"}
-              <input type="file" className="hidden" onChange={handleImageScan} accept="image/*" disabled={scanning} />
+              {scanning ? "Processing..." : "SELECT PDF OR PHOTO"}
+              <input type="file" className="hidden" onChange={handleFileScan} accept="image/*,application/pdf" disabled={scanning} />
             </label>
           </div>
 
