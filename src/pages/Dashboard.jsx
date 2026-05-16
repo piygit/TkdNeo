@@ -88,13 +88,18 @@ export default function Dashboard() {
 
   return (
     <div>
-      <h2 className="text-3xl font-black tracking-tight mb-1" style={{ fontFamily: 'var(--font-mono)' }}>DASHBOARD</h2>
-      <div className="flex justify-between items-center mb-6">
-        <p className="text-sm text-gray-500">Tournament overview at a glance</p>
-        <button onClick={seedTestData} className="brutal-btn brutal-btn-black text-[10px] py-2">
+      <div className="flex justify-between items-center mb-6 no-print">
+        <h2 className="text-3xl font-black tracking-tight" style={{ fontFamily: 'var(--font-mono)' }}>DASHBOARD</h2>
+        <div className="flex gap-2">
+          <button onClick={() => window.location.reload()} className="brutal-btn brutal-btn-white text-[10px] py-2 px-4">
+            FORCE CLOUD REFRESH
+          </button>
+          <button onClick={seedTestData} className="brutal-btn brutal-btn-black text-[10px] py-2 px-4">
             SEED TEST DATA (50 PLAYERS)
-        </button>
+          </button>
+        </div>
       </div>
+
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         {stats.map(s => (

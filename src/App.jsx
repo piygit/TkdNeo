@@ -16,6 +16,15 @@ function AppRouter() {
   const { auth } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Loading state
+  if (auth.loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center grad-hero">
+        <div className="text-white font-black text-2xl animate-pulse">CONNECTING TO CLOUD...</div>
+      </div>
+    );
+  }
+
   // Auth gate
   if (!auth.isLoggedIn) return <AuthScreen />;
   if (!auth.hasPaid) return <PaywallScreen />;

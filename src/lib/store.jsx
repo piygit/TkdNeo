@@ -1,21 +1,21 @@
 import { createContext, useContext, useReducer, useEffect, useRef } from 'react';
 import { db, auth as fbAuth } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 
 const AppContext = createContext(null);
 const AuthContext = createContext(null);
 
-const defaultAuth = { isLoggedIn: false, hasPaid: false, userId: null, userName: '', email: '' };
+const defaultAuth = { isLoggedIn: false, hasPaid: false, userId: null, userName: '', email: '', loading: true };
 
 function authReducer(state, action) {
   switch (action.type) {
     case 'SET_USER':
-      return { ...state, ...action.user, isLoggedIn: !!action.user.userId };
+      return { ...state, ...action.user, isLoggedIn: !!action.user.userId, loading: false };
     case 'PAY':
       return { ...state, hasPaid: true };
     case 'LOGOUT':
-      return { ...defaultAuth };
+      return { ...defaultAuth, loading: false };
     default:
       return state;
   }
@@ -57,7 +57,6 @@ export function AppProvider({ children }) {
   const [auth, authDispatch] = useReducer(authReducer, defaultAuth);
   const [state, dispatch] = useReducer(appReducer, defaultState);
   
-  // Use a Ref to track if the last update came from the cloud
   const isFromCloud = useRef(false);
   const isLoaded = useRef(false);
 
@@ -77,18 +76,16 @@ export function AppProvider({ children }) {
     });
   }, []);
 
-  // 2. Real-time Subscription (Cloud -> App)
+  // 2. Real-time Subscription
   useEffect(() => {
     if (auth.userId && auth.hasPaid) {
       const unsub = onSnapshot(doc(db, 'tournaments', auth.userId), (snapshot) => {
         if (snapshot.exists()) {
           const cloudData = snapshot.data();
-          // Flag this as a cloud update so we don't save it back
           isFromCloud.current = true;
           dispatch({ type: 'LOAD', state: cloudData });
           isLoaded.current = true;
         } else {
-          // New user: Initial save to create the doc
           setDoc(doc(db, 'tournaments', auth.userId), defaultState);
           isLoaded.current = true;
         }
@@ -97,35 +94,46 @@ export function AppProvider({ children }) {
     }
   }, [auth.userId, auth.hasPaid]);
 
-  // 3. Persistence (App -> Cloud)
+  // 3. Persistence (SAFE VERSION)
   useEffect(() => {
-    // Only save if:
-    // - User is logged in and paid
-    // - Data is fully loaded from cloud at least once
-    // - This specific change DID NOT come from a cloud sync
     if (auth.userId && auth.hasPaid && isLoaded.current) {
       if (isFromCloud.current) {
-        // Reset the flag and skip this save
         isFromCloud.current = false;
         return;
       }
 
       const timer = setTimeout(() => {
-        console.log("Saving to Cloud...");
-        setDoc(doc(db, 'tournaments', auth.userId), state, { merge: true })
-          .catch(err => console.error("Cloud Save Error:", err));
+        // OPTIMIZATION: Remove large logo from main sync document
+        const syncState = { ...state };
+        const logoData = syncState.settings.logo;
+        
+        // If logo is a large base64 string, move it to its own document
+        if (logoData && logoData.startsWith('data:image')) {
+            syncState.settings.logo = "CLOUD_STORAGE"; // Placeholder
+            // Save logo separately
+            setDoc(doc(db, 'logos', auth.userId), { logo: logoData }, { merge: true });
+        }
+
+        setDoc(doc(db, 'tournaments', auth.userId), syncState, { merge: true })
+          .catch(err => {
+            alert("🚨 SYNC FAILED: " + err.message);
+          });
       }, 500);
 
       return () => clearTimeout(timer);
     }
   }, [state, auth.userId, auth.hasPaid]);
 
-  // 4. Update payment status in Firestore
+  // Load Logo separately
   useEffect(() => {
-    if (auth.userId && auth.hasPaid) {
-      setDoc(doc(db, 'users', auth.userId), { hasPaid: true }, { merge: true });
+    if (auth.userId && auth.hasPaid && isLoaded.current) {
+        getDoc(doc(db, 'logos', auth.userId)).then(snap => {
+            if (snap.exists() && snap.data().logo) {
+                dispatch({ type: 'SET_SETTINGS', settings: { logo: snap.data().logo } });
+            }
+        });
     }
-  }, [auth.hasPaid, auth.userId]);
+  }, [auth.userId, auth.hasPaid, isLoaded.current]);
 
   return (
     <AuthContext.Provider value={{ auth, authDispatch }}>
