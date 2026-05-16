@@ -103,17 +103,28 @@ export default function Dashboard() {
     reader.onload = (event) => {
       try {
         const raw = JSON.parse(event.target.result);
-        // Look for the backup key in the total rescue file
-        const backupKey = Object.keys(raw).find(k => k.startsWith('tkd_backup_'));
-        if (backupKey) {
-          const stateData = JSON.parse(raw[backupKey]);
-          dispatch({ type: 'LOAD', state: stateData });
-          alert("✅ SUCCESS: 96 Athletes Restored! Wait 5 seconds for them to sync to the cloud.");
+        let stateToLoad = null;
+
+        // Choice A: Direct state file (Emergency Backup)
+        if (raw.athletes) {
+            stateToLoad = raw;
+        } 
+        // Choice B: Total rescue file (LocalStorage dump)
+        else {
+            const backupKey = Object.keys(raw).find(k => k.startsWith('tkd_backup_'));
+            if (backupKey) {
+                stateToLoad = JSON.parse(raw[backupKey]);
+            }
+        }
+
+        if (stateToLoad && stateToLoad.athletes) {
+          dispatch({ type: 'LOAD', state: stateToLoad });
+          alert(`✅ SUCCESS: ${stateToLoad.athletes.length} Athletes Restored!`);
         } else {
-          alert("❌ Error: This file doesn't seem to have tournament data.");
+          alert("❌ Error: Could not find tournament data in this file.");
         }
       } catch (err) {
-        alert("❌ Error reading backup file.");
+        alert("❌ Error: This file is corrupted or not a valid backup.");
       }
     };
     reader.readAsText(file);
