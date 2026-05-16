@@ -103,21 +103,21 @@ export function AppProvider({ children }) {
       }
 
       const timer = setTimeout(() => {
-        // OPTIMIZATION: Remove large logo from main sync document
+        console.log("Saving to Cloud & Local...");
+        
+        // 1. Local Backup (Always works even without internet)
+        localStorage.setItem(`tkd_backup_${auth.userId}`, JSON.stringify(state));
+
+        // 2. Cloud Sync (Excluding large logo)
         const syncState = { ...state };
         const logoData = syncState.settings.logo;
-        
-        // If logo is a large base64 string, move it to its own document
         if (logoData && logoData.startsWith('data:image')) {
-            syncState.settings.logo = "CLOUD_STORAGE"; // Placeholder
-            // Save logo separately
+            syncState.settings.logo = "CLOUD_STORAGE";
             setDoc(doc(db, 'logos', auth.userId), { logo: logoData }, { merge: true });
         }
 
         setDoc(doc(db, 'tournaments', auth.userId), syncState, { merge: true })
-          .catch(err => {
-            alert("🚨 SYNC FAILED: " + err.message);
-          });
+          .catch(err => console.error("Cloud Error:", err));
       }, 500);
 
       return () => clearTimeout(timer);
