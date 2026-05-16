@@ -5,6 +5,48 @@ import { useState } from 'react';
 export default function Registration() {
   const { state, dispatch } = useApp();
   const [form, setForm] = useState({ name: '', club: '', age: '', gender: '', weight: '' });
+  const [scanning, setScanning] = useState(false);
+  const [scanResult, setScanResult] = useState([]);
+
+  const handleImageScan = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    setScanning(true);
+    
+    try {
+      const { data: { text } } = await Tesseract.recognize(file, 'eng');
+      const lines = text.split('\n').filter(l => l.trim().length > 5);
+      
+      // Simple parser: Name, Club, Weight
+      const found = lines.map(line => {
+        const parts = line.split(/[,\s]+/).filter(p => p.length > 1);
+        return {
+          name: parts[0] || 'Unknown',
+          club: parts[1] || 'Club',
+          weight: parts.find(p => !isNaN(p)) || '50'
+        };
+      });
+      setScanResult(found);
+    } catch (err) {
+      alert("Error scanning image: " + err.message);
+    }
+    setScanning(false);
+  };
+
+  const addScannedAthletes = () => {
+    scanResult.forEach(s => {
+      const age = form.age || "Senior (18+)";
+      const gender = form.gender || "Male";
+      const wc = getWeightClass(age, gender, parseFloat(s.weight));
+      const division = `${age} ${gender} ${wc}`;
+      dispatch({ type: 'ADD_ATHLETE', athlete: {
+        id: 'a_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+        name: s.name, club: s.club, age, gender, weight: parseFloat(s.weight), weightClass: wc, division
+      }});
+    });
+    setScanResult([]);
+    alert(`Successfully added ${scanResult.length} athletes!`);
+  };
 
   const handleSubmit = e => {
     e.preventDefault();
@@ -23,6 +65,67 @@ export default function Registration() {
     <div>
       <h2 className="text-3xl font-black tracking-tight mb-1" style={{ fontFamily: 'var(--font-mono)' }}>REGISTRATION</h2>
       <p className="text-sm text-gray-500 mb-6">Register athletes for the tournament</p>
+
+      <div className="brutal-card mb-8">
+        <div className="p-4 border-b-3 border-black grad-amber flex justify-between items-center">
+          <h3 className="font-bold text-sm uppercase tracking-wider">Photo AI Scanner</h3>
+          {scanning && <span className="animate-pulse text-xs font-bold">SCANNING IMAGE...</span>}
+        </div>
+        <div className="p-6">
+          <p className="text-xs mb-4">Upload a photo of your handwritten or printed list. The AI will try to extract names and weights.</p>
+          <div className="flex gap-4">
+            <label className="brutal-btn brutal-btn-white flex-1 text-center cursor-pointer">
+              {scanning ? "Processing..." : "SELECT PHOTO OF LIST"}
+              <input type="file" className="hidden" onChange={handleImageScan} accept="image/*" disabled={scanning} />
+            </label>
+          </div>
+
+          {scanResult.length > 0 && (
+            <div className="mt-6 border-t-2 border-black pt-4">
+              <h4 className="font-bold text-sm mb-2">SCANNED RESULTS ({scanResult.length})</h4>
+              <div className="max-h-60 overflow-y-auto mb-4 border-2 border-black">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-gray-100 border-b-2 border-black">
+                    <tr><th className="p-2">Name</th><th className="p-2">Club</th><th className="p-2">Weight</th></tr>
+                  </thead>
+                  <tbody>
+                    {scanResult.map((s, idx) => (
+                      <tr key={idx} className="border-b border-gray-200">
+                        <td className="p-2"><input className="w-full border-none p-0" value={s.name} onChange={e => {
+                          const newRes = [...scanResult]; newRes[idx].name = e.target.value; setScanResult(newRes);
+                        }} /></td>
+                        <td className="p-2"><input className="w-full border-none p-0" value={s.club} onChange={e => {
+                          const newRes = [...scanResult]; newRes[idx].club = e.target.value; setScanResult(newRes);
+                        }} /></td>
+                        <td className="p-2"><input className="w-full border-none p-0" value={s.weight} onChange={e => {
+                          const newRes = [...scanResult]; newRes[idx].weight = e.target.value; setScanResult(newRes);
+                        }} /></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="bg-blue-50 p-4 border-2 border-black mb-4">
+                <p className="text-[10px] font-bold uppercase mb-2">Apply to all scanned athletes:</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <select className="brutal-select text-xs" value={form.age} onChange={e => setForm({...form, age: e.target.value})}>
+                    <option value="Senior (18+)">Senior (18+)</option>
+                    <option value="Pee-Wee (Under 7)">Pee-Wee (Under 7)</option>
+                    <option value="Sub-Junior (Under 12)">Sub-Junior (Under 12)</option>
+                    <option value="Cadet (12-14)">Cadet (12-14)</option>
+                    <option value="Junior (15-17)">Junior (15-17)</option>
+                  </select>
+                  <select className="brutal-select text-xs" value={form.gender} onChange={e => setForm({...form, gender: e.target.value})}>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                  </select>
+                </div>
+              </div>
+              <button onClick={addScannedAthletes} className="brutal-btn brutal-btn-green w-full">CONFIRM & ADD ALL ATHLETES</button>
+            </div>
+          )}
+        </div>
+      </div>
 
       <div className="brutal-card mb-8">
         <div className="p-4 border-b-3 border-black grad-blue text-white">
