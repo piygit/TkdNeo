@@ -1,7 +1,7 @@
 import { createContext, useContext, useReducer, useEffect, useRef } from 'react';
 import { db, auth as fbAuth } from './firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc, getDoc } from 'firebase/firestore';
 
 const AppContext = createContext(null);
 const AuthContext = createContext(null);
@@ -32,7 +32,15 @@ const defaultState = {
 function appReducer(state, action) {
   switch (action.type) {
     case 'LOAD':
-      return { ...defaultState, ...action.state };
+      const newState = { ...defaultState, ...action.state };
+      // De-stringify brackets and results if they came from cloud
+      if (typeof newState.brackets === 'string') {
+        try { newState.brackets = JSON.parse(newState.brackets); } catch(e) { newState.brackets = {}; }
+      }
+      if (typeof newState.results === 'string') {
+        try { newState.results = JSON.parse(newState.results); } catch(e) { newState.results = {}; }
+      }
+      return newState;
     case 'ADD_ATHLETE':
       return { ...state, athletes: [...state.athletes, action.athlete] };
     case 'DELETE_ATHLETE':
@@ -60,7 +68,6 @@ export function AppProvider({ children }) {
   const isFromCloud = useRef(false);
   const isLoaded = useRef(false);
 
-  // 1. Firebase Auth
   useEffect(() => {
     return onAuthStateChanged(fbAuth, async (user) => {
       if (user) {
@@ -76,7 +83,6 @@ export function AppProvider({ children }) {
     });
   }, []);
 
-  // 2. Real-time Subscription
   useEffect(() => {
     if (auth.userId && auth.hasPaid) {
       const unsub = onSnapshot(doc(db, 'tournaments', auth.userId), (snapshot) => {
@@ -86,7 +92,7 @@ export function AppProvider({ children }) {
           dispatch({ type: 'LOAD', state: cloudData });
           isLoaded.current = true;
         } else {
-          setDoc(doc(db, 'tournaments', auth.userId), defaultState);
+          setDoc(doc(db, 'tournaments', auth.userId), { ...defaultState, brackets: "{}", results: "{}" });
           isLoaded.current = true;
         }
       });
@@ -94,7 +100,6 @@ export function AppProvider({ children }) {
     }
   }, [auth.userId, auth.hasPaid]);
 
-  // 3. Persistence (SAFE VERSION)
   useEffect(() => {
     if (auth.userId && auth.hasPaid && isLoaded.current) {
       if (isFromCloud.current) {
@@ -103,13 +108,13 @@ export function AppProvider({ children }) {
       }
 
       const timer = setTimeout(() => {
-        console.log("Saving to Cloud & Local...");
-        
-        // 1. Local Backup (Always works even without internet)
-        localStorage.setItem(`tkd_backup_${auth.userId}`, JSON.stringify(state));
+        // Stringify nested structures to avoid Firestore errors
+        const syncState = { 
+            ...state,
+            brackets: JSON.stringify(state.brackets),
+            results: JSON.stringify(state.results)
+        };
 
-        // 2. Cloud Sync (Excluding large logo)
-        const syncState = { ...state };
         const logoData = syncState.settings.logo;
         if (logoData && logoData.startsWith('data:image')) {
             syncState.settings.logo = "CLOUD_STORAGE";
@@ -117,14 +122,16 @@ export function AppProvider({ children }) {
         }
 
         setDoc(doc(db, 'tournaments', auth.userId), syncState, { merge: true })
-          .catch(err => console.error("Cloud Error:", err));
+          .catch(err => {
+            console.error("Critical Sync Error:", err);
+            alert("🚨 CLOUD ERROR: " + err.message);
+          });
       }, 500);
 
       return () => clearTimeout(timer);
     }
   }, [state, auth.userId, auth.hasPaid]);
 
-  // Load Logo separately
   useEffect(() => {
     if (auth.userId && auth.hasPaid && isLoaded.current) {
         getDoc(doc(db, 'logos', auth.userId)).then(snap => {
