@@ -9,7 +9,7 @@ export default function Registration() {
   const handleSubmit = e => {
     e.preventDefault();
     if (!form.name || !form.club || !form.age || !form.gender || !form.weight) return;
-    const wc = getWeightClass(form.gender, parseFloat(form.weight));
+    const wc = getWeightClass(form.age, form.gender, parseFloat(form.weight));
     const division = `${form.age} ${form.gender} ${wc}`;
     const athlete = {
       id: 'a_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
