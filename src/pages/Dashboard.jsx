@@ -130,11 +130,22 @@ export default function Dashboard() {
     reader.readAsText(file);
   };
 
+  const resetTournament = () => {
+    const confirm1 = window.confirm("⚠️ WARNING: Are you sure you want to delete ALL athletes, brackets, and results to start a new tournament?");
+    if (confirm1) {
+      const confirm2 = window.confirm("🚨 FINAL WARNING: This action CANNOT be undone. Have you downloaded an Emergency Backup first?");
+      if (confirm2) {
+        dispatch({ type: 'RESET' });
+        alert("✅ Tournament reset successfully. You can now start fresh!");
+      }
+    }
+  };
+
   return (
     <div>
       <div className="flex justify-between items-center mb-6 no-print">
         <h2 className="text-3xl font-black tracking-tight" style={{ fontFamily: 'var(--font-mono)' }}>DASHBOARD</h2>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
           <label className="brutal-btn grad-green text-[10px] py-2 px-4 border-2 cursor-pointer">
             IMPORT FROM BACKUP
             <input type="file" className="hidden" onChange={importData} accept=".json" />
@@ -142,6 +153,10 @@ export default function Dashboard() {
           <button onClick={exportData} className="brutal-btn grad-amber text-[10px] py-2 px-4 border-2">
             EMERGENCY BACKUP
           </button>
+          <button onClick={resetTournament} className="brutal-btn brutal-btn-red text-[10px] py-2 px-4 border-2">
+            START NEW TOURNAMENT (RESET)
+          </button>
+
 
 
           <button onClick={seedTestData} className="brutal-btn brutal-btn-black text-[10px] py-2 px-4">
