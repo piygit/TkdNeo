@@ -4,6 +4,7 @@ import { useState } from 'react';
 
 export default function Fixtures() {
   const { state, dispatch } = useApp();
+  const [selectedDiv, setSelectedDiv] = useState('');
   const [viewAll, setViewAll] = useState(false);
   const divNames = Object.keys(state.divisions).filter(d => state.divisions[d].length >= 2);
 
