@@ -6,7 +6,6 @@ export default function Fixtures() {
   const { state, dispatch } = useApp();
   const [selectedDiv, setSelectedDiv] = useState('');
   const [viewAll, setViewAll] = useState(false);
-  // Include divisions with at least 1 player
   const divNames = Object.keys(state.divisions).filter(d => state.divisions[d].length >= 1);
 
   const generateSingle = () => {
@@ -32,30 +31,33 @@ export default function Fixtures() {
   const buildTree = (rounds) => {
     if (!rounds || rounds.length === 0) return null;
     const finalMatch = rounds[rounds.length - 1][0];
-    const buildNode = (match) => {
+    const totalRounds = rounds.length;
+    
+    const buildNode = (match, roundIndex) => {
       if (!match) return null;
-      const node = { match, children: [] };
+      const node = { match, children: [], roundIndex, totalRounds };
       if (match.parent1Id) {
         for (const round of rounds) {
           for (const m of round) {
-            if (m.id === match.parent1Id) node.children.push(buildNode(m));
-            if (m.id === match.parent2Id) node.children.push(buildNode(m));
+            if (m.id === match.parent1Id) node.children.push(buildNode(m, roundIndex - 1));
+            if (m.id === match.parent2Id) node.children.push(buildNode(m, roundIndex - 1));
           }
         }
       }
       return node;
     };
-    return buildNode(finalMatch);
+    return buildNode(finalMatch, totalRounds - 1);
   };
 
   const displayDivs = viewAll ? divNames.filter(d => state.brackets[d]) : (selectedDiv && state.brackets[selectedDiv] ? [selectedDiv] : []);
+  const todayDate = new Date().toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute:'2-digit' });
 
   return (
     <div>
-      <div className="no-print">
+      <div className="no-print mb-8">
         <h2 className="text-3xl font-black tracking-tight mb-1" style={{ fontFamily: 'var(--font-mono)' }}>FIXTURES</h2>
-        <p className="text-sm text-gray-500 mb-4">Single-elimination tournament brackets</p>
-        <div className="flex flex-wrap gap-3 mb-6 items-end">
+        <p className="text-sm text-gray-500 mb-4">Professional draw sheets</p>
+        <div className="flex flex-wrap gap-3 items-end">
           <div>
             <select className="brutal-select w-64" value={selectedDiv} onChange={e => { setSelectedDiv(e.target.value); setViewAll(false); }}>
               <option value="">Select Division</option>
@@ -63,14 +65,12 @@ export default function Fixtures() {
             </select>
           </div>
           <button onClick={generateSingle} className="brutal-btn brutal-btn-blue text-sm h-[42px]">GENERATE BRACKET</button>
-          
           <div className="w-1 h-8 border-l-2 border-gray-300 mx-2"></div>
-          
-          <button onClick={generateAll} className="brutal-btn grad-dark text-white text-sm h-[42px]">GENERATE ALL FIXTURES</button>
+          <button onClick={generateAll} className="brutal-btn grad-dark text-white text-sm h-[42px]">GENERATE ALL</button>
           
           {displayDivs.length > 0 && (
-            <button onClick={() => handlePrint(viewAll ? 'All_Tournament_Fixtures' : selectedDiv)} className="brutal-btn brutal-btn-white text-sm h-[42px] border-dashed border-2">
-              ↓ DOWNLOAD PDF
+            <button onClick={() => handlePrint(viewAll ? 'All_Draws' : selectedDiv)} className="brutal-btn brutal-btn-white text-sm h-[42px] border-dashed border-2 ml-auto">
+              ↓ DOWNLOAD PDF (KIHAPP STYLE)
             </button>
           )}
         </div>
@@ -82,50 +82,78 @@ export default function Fixtures() {
           <p className="text-gray-400 font-medium">Select a division or generate all brackets to view fixtures</p>
         </div>
       ) : (
-        <div className="flex flex-col items-center w-full">
+        <div className="flex flex-col w-full bg-gray-50 p-4 print:p-0 print:bg-white print:block">
           {displayDivs.map((div, index) => {
             const tree = buildTree(state.brackets[div]);
             return (
-              <div key={div} className={`fixture-page flex flex-col items-center w-full ${index !== 0 ? 'page-break' : ''} mb-12`}>
+              <div key={div} className={`kihapp-page ${index !== 0 ? 'page-break' : ''} bg-white shadow-lg mb-8 mx-auto relative print:shadow-none print:mb-0 print:mx-0 overflow-hidden`}>
                 
-                {/* Print header for each division - CENTERED */}
-                <div className="print-only flex flex-col items-center justify-center text-center gap-4 pb-4 border-b-3 border-black mb-6 w-full max-w-4xl">
-                  {state.settings.logo && state.settings.logo !== "CLOUD_STORAGE" && (
-                    <img src={state.settings.logo} alt="" className="h-20 border-3 border-black" />
-                  )}
-                  <div>
-                    <h1 className="text-3xl font-black">{state.settings.name || 'Tournament'}</h1>
-                    <h2 className="text-xl font-bold text-gray-600 mt-2">{div}</h2>
-                  </div>
+                {/* Header */}
+                <div className="pt-8 px-10 pb-4">
+                  <h1 className="text-2xl font-bold text-gray-900 tracking-tight" style={{ fontFamily: 'Helvetica, Arial, sans-serif' }}>
+                    {div}
+                  </h1>
                 </div>
 
-                {!viewAll && (
-                  <h3 className="text-xl font-bold mb-4 no-print border-b-2 pb-2 text-center w-full">{div}</h3>
-                )}
-
-                <div className="overflow-x-auto pb-4 w-full flex justify-center">
-                  <div className="bracket-wrapper">
+                {/* Bracket Area */}
+                <div className="px-10 pb-32 overflow-x-auto min-h-[500px]">
+                  <div className="bracket-wrapper pt-10">
                     {tree ? <BracketNode node={tree} isRoot={true} /> : <p>No matches generated.</p>}
                   </div>
                 </div>
+
+                {/* 1st, 2nd, 3rd Results Box */}
+                <div className="absolute right-10 bottom-32 w-64 border border-gray-300 bg-white shadow-sm z-10">
+                  <div className="flex border-b border-gray-300"><div className="w-12 border-r border-gray-300 p-2 text-xs text-gray-600 text-center">1st</div><div className="p-2 flex-1"></div></div>
+                  <div className="flex border-b border-gray-300"><div className="w-12 border-r border-gray-300 p-2 text-xs text-gray-600 text-center">2nd</div><div className="p-2 flex-1"></div></div>
+                  <div className="flex"><div className="w-12 border-r border-gray-300 p-2 text-xs text-gray-600 text-center">3rd</div><div className="p-2 flex-1"></div></div>
+                </div>
+
+                {/* Print Footer */}
+                <div className="absolute bottom-6 left-10 right-10 flex justify-between items-end border-t border-gray-200 pt-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-gray-200 flex items-center justify-center text-[8px] text-gray-500 text-center">
+                      QR<br/>CODE
+                    </div>
+                    <div>
+                      <div className="text-xs font-bold text-gray-800">{state.settings.name || 'Taekwondo Championship'}</div>
+                      <div className="text-[10px] text-gray-500 mt-1">tkd-neo.vercel.app / draws</div>
+                    </div>
+                  </div>
+                  
+                  <div className="text-center">
+                    <div className="text-[10px] text-gray-500">Version 1</div>
+                    <div className="text-[9px] text-gray-400 mt-1">Printed {todayDate}</div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="text-2xl font-black tracking-tighter text-blue-600">TKD <span className="text-red-500">NEO</span></div>
+                  </div>
+                </div>
+                
               </div>
             );
           })}
         </div>
       )}
 
-      <style>{bracketCSS}</style>
+      <style>{kihappCSS}</style>
     </div>
   );
 }
 
 function BracketNode({ node, isRoot }) {
-  const { match } = node;
+  const { match, roundIndex, totalRounds } = node;
   const p1 = match.player1;
   const p2 = match.player2;
-  const p1Win = match.winner && p1 && match.winner.id === p1.id;
-  const p2Win = match.winner && p2 && match.winner.id === p2.id;
   const isBye = p2 && p2.id === 'BYE';
+
+  const diff = totalRounds - 1 - roundIndex;
+  let roundName = '';
+  if (diff === 0) roundName = 'Final';
+  else if (diff === 1) roundName = 'Semifinal';
+  else if (diff === 2) roundName = 'Quarterfinal';
+  else roundName = `Round of ${Math.pow(2, diff + 1)}`;
 
   return (
     <div className="bracket-node">
@@ -136,18 +164,27 @@ function BracketNode({ node, isRoot }) {
           ))}
         </div>
       )}
+      
       {node.children.length > 0 && <div className="bracket-connector" />}
-      <div className={`bracket-match ${isRoot ? 'bracket-final' : ''}`}>
-        <div className={`bracket-player bracket-p1 ${p1Win ? 'bracket-winner' : ''}`}>
-          <div className="bracket-player-info">
-            <span className="bracket-player-name">{p1?.name || 'TBD'}</span>
-            {p1?.club && <span className="bracket-player-club">{p1.club}</span>}
+      
+      <div className="flex flex-col">
+        <div className="text-xs text-gray-600 font-medium mb-1 pl-2">{roundName}</div>
+        <div className="k-match-box">
+          {/* Player 1 (RED) */}
+          <div className="k-player k-red">
+            <div className="k-p-info">
+              <span className="k-name">{p1?.name || ''}</span>
+              <span className="k-club">{p1?.club || ''}</span>
+            </div>
+            <div className="k-p-flag"></div>
           </div>
-        </div>
-        <div className={`bracket-player bracket-p2 ${isBye ? 'bracket-bye' : ''} ${p2Win ? 'bracket-winner' : ''}`}>
-          <div className="bracket-player-info">
-            <span className="bracket-player-name">{isBye ? 'BYE' : (p2?.name || 'TBD')}</span>
-            {p2?.club && !isBye && <span className="bracket-player-club">{p2.club}</span>}
+          {/* Player 2 (BLUE) */}
+          <div className="k-player k-blue border-t border-gray-300">
+            <div className="k-p-info">
+              <span className="k-name">{isBye ? '' : (p2?.name || '')}</span>
+              <span className="k-club">{!isBye && p2?.club ? p2.club : ''}</span>
+            </div>
+            <div className="k-p-flag"></div>
           </div>
         </div>
       </div>
@@ -155,14 +192,21 @@ function BracketNode({ node, isRoot }) {
   );
 }
 
-const bracketCSS = `
+const kihappCSS = `
   .page-break {
     page-break-before: always;
   }
 
+  .kihapp-page {
+    width: 297mm;
+    height: 210mm; /* A4 Landscape dimensions */
+    position: relative;
+    font-family: Helvetica, Arial, sans-serif;
+  }
+
   .bracket-wrapper {
-    display: inline-block;
-    padding: 24px 16px;
+    display: flex;
+    align-items: center;
   }
 
   .bracket-node {
@@ -183,89 +227,86 @@ const bracketCSS = `
     right: 0;
     top: 25%;
     bottom: 25%;
-    width: 3px;
-    background: #000;
-    z-index: 1;
+    width: 1px;
+    background: #a3a3a3; /* Thin grey connecting line */
   }
 
-  .bracket-children > .bracket-node:first-child { padding-bottom: 8px; }
-  .bracket-children > .bracket-node:last-child { padding-top: 8px; }
+  .bracket-children > .bracket-node:first-child { padding-bottom: 12px; }
+  .bracket-children > .bracket-node:last-child { padding-top: 12px; }
 
   .bracket-connector {
-    width: 32px;
-    height: 3px;
-    background: #000;
+    width: 24px;
+    height: 1px;
+    background: #a3a3a3;
     flex-shrink: 0;
   }
 
   .bracket-children > .bracket-node::after {
     content: '';
-    width: 32px;
-    height: 3px;
-    background: #000;
+    width: 24px;
+    height: 1px;
+    background: #a3a3a3;
     flex-shrink: 0;
   }
 
-  .bracket-match {
-    width: 340px; /* INCREASED FROM 230px TO ALLOW FULL NAME VISIBILITY */
-    border: 3px solid #000;
+  /* Kihapp Style Match Box */
+  .k-match-box {
+    width: 280px;
+    border: 1px solid #d1d5db; /* Light grey border */
     background: #fff;
-    box-shadow: 4px 4px 0 #000;
     flex-shrink: 0;
+    box-sizing: border-box;
+  }
+
+  .k-player {
+    display: flex;
+    justify-content: space-between;
+    height: 38px;
+    padding: 4px 8px;
+    box-sizing: border-box;
+    background: #fff;
+  }
+
+  /* Thick corner colors */
+  .k-red { border-left: 8px solid #ef4444; }
+  .k-blue { border-left: 8px solid #3b82f6; }
+
+  .k-p-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
     overflow: hidden;
   }
 
-  .bracket-final {
-    box-shadow: 4px 4px 0 #2563eb;
-    border-color: #2563eb;
-  }
-
-  .bracket-player {
-    padding: 10px 14px;
-    display: flex;
-    align-items: center;
-    transition: background 0.15s;
-  }
-
-  .bracket-p1 {
-    border-left: 6px solid #2563eb;
-    border-bottom: 2px solid #000;
-  }
-
-  .bracket-p2 { border-left: 6px solid #dc2626; }
-  .bracket-bye { border-left-color: #d1d5db; color: #9ca3af; font-style: italic; }
-  .bracket-winner { background: linear-gradient(90deg, #dcfce7, #fff) !important; border-left-color: #16a34a !important; }
-
-  .bracket-player-info {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex: 1;
-    min-width: 0;
-  }
-
-  .bracket-player-name {
-    font-weight: 700;
+  .k-name {
     font-size: 13px;
-    flex: 1;
+    font-weight: 700;
+    color: #111827;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    line-height: 1.2;
   }
 
-  .bracket-player-club {
+  .k-club {
     font-size: 10px;
-    color: #9ca3af;
-    background: #f3f4f6;
-    padding: 2px 8px;
-    border: 1px solid #e5e7eb;
+    color: #6b7280;
     white-space: nowrap;
-    flex-shrink: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.2;
+  }
+
+  .k-p-flag {
+    width: 32px;
+    border-left: 1px solid #e5e7eb;
+    margin: -4px -8px -4px 8px; /* Extend to fill height */
   }
 
   @media print {
-    @page { size: landscape; margin: 10mm; }
-    .bracket-match { box-shadow: none !important; }
-    .bracket-final { border-color: #000; }
+    @page { size: A4 landscape; margin: 0; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #fff; }
+    .kihapp-page { width: 100%; height: 100vh; margin: 0; box-shadow: none; border: none; overflow: hidden; page-break-after: always; }
+    .no-print { display: none !important; }
   }
 `;
