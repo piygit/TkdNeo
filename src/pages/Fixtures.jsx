@@ -111,7 +111,7 @@ export default function Fixtures() {
                 </div>
 
                 {/* 1st, 2nd, 3rd, 3rd Results Box */}
-                <div className="absolute right-10 bottom-24 w-64 border border-gray-300 bg-white shadow-sm z-10">
+                <div className="absolute right-10 bottom-28 w-64 border border-gray-300 bg-white shadow-sm z-10">
                   <div className="flex border-b border-gray-300"><div className="w-12 border-r border-gray-300 p-2 text-xs text-gray-600 text-center">1st</div><div className="p-2 flex-1"></div></div>
                   <div className="flex border-b border-gray-300"><div className="w-12 border-r border-gray-300 p-2 text-xs text-gray-600 text-center">2nd</div><div className="p-2 flex-1"></div></div>
                   <div className="flex border-b border-gray-300"><div className="w-12 border-r border-gray-300 p-2 text-xs text-gray-600 text-center">3rd</div><div className="p-2 flex-1"></div></div>
@@ -119,7 +119,7 @@ export default function Fixtures() {
                 </div>
 
                 {/* Print Footer */}
-                <div className="absolute bottom-6 left-10 right-10 flex justify-between items-end border-t border-gray-200 pt-4">
+                <div className="absolute bottom-8 left-10 right-10 flex justify-between items-end border-t border-gray-200 pt-4 bg-white z-10">
                   <div className="flex items-center gap-4">
                     <div>
                       <div className="text-xs font-bold text-gray-800">{state.settings.name || 'Taekwondo Championship'}</div>
