@@ -85,6 +85,14 @@ export default function Fixtures() {
         <div className="flex flex-col w-full bg-gray-50 p-4 print:p-0 print:bg-white print:block">
           {displayDivs.map((div, index) => {
             const tree = buildTree(state.brackets[div]);
+            const totalRounds = tree ? tree.totalRounds : 0;
+            
+            // Auto-scale large brackets so they fit on one A4 page
+            let bracketScale = 1;
+            if (totalRounds === 4) bracketScale = 0.85; // 16 players
+            if (totalRounds === 5) bracketScale = 0.55; // 32 players
+            if (totalRounds >= 6) bracketScale = 0.35;  // 64+ players
+
             return (
               <div key={div} className={`kihapp-page ${index !== 0 ? 'page-break' : ''} bg-white shadow-lg mb-8 mx-auto relative print:shadow-none print:mb-0 print:mx-0 overflow-hidden`}>
                 
@@ -95,29 +103,26 @@ export default function Fixtures() {
                   </h1>
                 </div>
 
-                {/* Bracket Area */}
-                <div className="px-10 pb-32 overflow-x-auto min-h-[500px]">
-                  <div className="bracket-wrapper pt-10">
+                {/* Bracket Area with Dynamic Scaling */}
+                <div className="px-10 pb-32 overflow-hidden min-h-[500px]">
+                  <div className="bracket-wrapper pt-6" style={{ transform: `scale(${bracketScale})`, transformOrigin: 'left top' }}>
                     {tree ? <BracketNode node={tree} isRoot={true} /> : <p>No matches generated.</p>}
                   </div>
                 </div>
 
-                {/* 1st, 2nd, 3rd Results Box */}
-                <div className="absolute right-10 bottom-32 w-64 border border-gray-300 bg-white shadow-sm z-10">
+                {/* 1st, 2nd, 3rd, 3rd Results Box */}
+                <div className="absolute right-10 bottom-24 w-64 border border-gray-300 bg-white shadow-sm z-10">
                   <div className="flex border-b border-gray-300"><div className="w-12 border-r border-gray-300 p-2 text-xs text-gray-600 text-center">1st</div><div className="p-2 flex-1"></div></div>
                   <div className="flex border-b border-gray-300"><div className="w-12 border-r border-gray-300 p-2 text-xs text-gray-600 text-center">2nd</div><div className="p-2 flex-1"></div></div>
+                  <div className="flex border-b border-gray-300"><div className="w-12 border-r border-gray-300 p-2 text-xs text-gray-600 text-center">3rd</div><div className="p-2 flex-1"></div></div>
                   <div className="flex"><div className="w-12 border-r border-gray-300 p-2 text-xs text-gray-600 text-center">3rd</div><div className="p-2 flex-1"></div></div>
                 </div>
 
                 {/* Print Footer */}
                 <div className="absolute bottom-6 left-10 right-10 flex justify-between items-end border-t border-gray-200 pt-4">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gray-200 flex items-center justify-center text-[8px] text-gray-500 text-center">
-                      QR<br/>CODE
-                    </div>
                     <div>
                       <div className="text-xs font-bold text-gray-800">{state.settings.name || 'Taekwondo Championship'}</div>
-                      <div className="text-[10px] text-gray-500 mt-1">tkd-neo.vercel.app / draws</div>
                     </div>
                   </div>
                   
