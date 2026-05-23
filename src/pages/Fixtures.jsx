@@ -6,7 +6,8 @@ export default function Fixtures() {
   const { state, dispatch } = useApp();
   const [selectedDiv, setSelectedDiv] = useState('');
   const [viewAll, setViewAll] = useState(false);
-  const divNames = Object.keys(state.divisions).filter(d => state.divisions[d].length >= 2);
+  // Include divisions with at least 1 player
+  const divNames = Object.keys(state.divisions).filter(d => state.divisions[d].length >= 1);
 
   const generateSingle = () => {
     if (!selectedDiv) { alert('Select a division'); return; }
@@ -28,7 +29,6 @@ export default function Fixtures() {
     document.title = originalTitle;
   };
 
-  // Helper to build a tree for a given division
   const buildTree = (rounds) => {
     if (!rounds || rounds.length === 0) return null;
     const finalMatch = rounds[rounds.length - 1][0];
@@ -48,7 +48,6 @@ export default function Fixtures() {
     return buildNode(finalMatch);
   };
 
-  // What divisions to show
   const displayDivs = viewAll ? divNames.filter(d => state.brackets[d]) : (selectedDiv && state.brackets[selectedDiv] ? [selectedDiv] : []);
 
   return (
@@ -83,27 +82,28 @@ export default function Fixtures() {
           <p className="text-gray-400 font-medium">Select a division or generate all brackets to view fixtures</p>
         </div>
       ) : (
-        <div>
+        <div className="flex flex-col items-center w-full">
           {displayDivs.map((div, index) => {
             const tree = buildTree(state.brackets[div]);
             return (
-              <div key={div} className={`fixture-page ${index !== 0 ? 'page-break' : ''} mb-12`}>
-                {/* Print header for each division */}
-                <div className="print-only items-center gap-4 pb-4 border-b-3 border-black mb-6">
+              <div key={div} className={`fixture-page flex flex-col items-center w-full ${index !== 0 ? 'page-break' : ''} mb-12`}>
+                
+                {/* Print header for each division - CENTERED */}
+                <div className="print-only flex flex-col items-center justify-center text-center gap-4 pb-4 border-b-3 border-black mb-6 w-full max-w-4xl">
                   {state.settings.logo && state.settings.logo !== "CLOUD_STORAGE" && (
-                    <img src={state.settings.logo} alt="" className="h-16 border-3 border-black" />
+                    <img src={state.settings.logo} alt="" className="h-20 border-3 border-black" />
                   )}
                   <div>
-                    <h1 className="text-2xl font-black">{state.settings.name || 'Tournament'}</h1>
-                    <h2 className="text-lg font-bold text-gray-600">{div}</h2>
+                    <h1 className="text-3xl font-black">{state.settings.name || 'Tournament'}</h1>
+                    <h2 className="text-xl font-bold text-gray-600 mt-2">{div}</h2>
                   </div>
                 </div>
 
                 {!viewAll && (
-                  <h3 className="text-xl font-bold mb-4 no-print border-b-2 pb-2">{div}</h3>
+                  <h3 className="text-xl font-bold mb-4 no-print border-b-2 pb-2 text-center w-full">{div}</h3>
                 )}
 
-                <div className="overflow-x-auto pb-4">
+                <div className="overflow-x-auto pb-4 w-full flex justify-center">
                   <div className="bracket-wrapper">
                     {tree ? <BracketNode node={tree} isRoot={true} /> : <p>No matches generated.</p>}
                   </div>

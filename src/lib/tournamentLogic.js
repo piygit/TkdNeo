@@ -129,9 +129,21 @@ export function getWeightClass(age, gender, weight) {
 }
 
 export function generateBracket(athletes) {
-  if (!athletes || athletes.length < 2) return null;
+  if (!athletes || athletes.length === 0) return null;
   const shuffled = [...athletes].sort(() => 0.5 - Math.random());
   const numAthletes = shuffled.length;
+  
+  // Handle single player division
+  if (numAthletes === 1) {
+    return [[{
+      id: `m_${Date.now()}_0`,
+      nextMatchId: null,
+      player1: shuffled[0],
+      player2: { id: 'BYE', name: 'BYE' },
+      winner: shuffled[0] // Auto-win
+    }]];
+  }
+
   let power = 1;
   while (power < numAthletes) power *= 2;
   const byes = power - numAthletes;
