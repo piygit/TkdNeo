@@ -310,8 +310,18 @@ const kihappCSS = `
 
   @media print {
     @page { size: A4 landscape; margin: 0; }
-    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: #fff; }
-    .kihapp-page { width: 100%; height: 100vh; margin: 0; box-shadow: none; border: none; overflow: hidden; page-break-after: always; }
+    html, body { margin: 0; padding: 0; background: #fff; }
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .kihapp-page { 
+      width: 297mm !important; 
+      height: 209mm !important; /* Slightly under 210mm to prevent overflow */
+      margin: 0 !important; 
+      box-shadow: none !important; 
+      border: none !important; 
+      overflow: hidden !important; 
+      page-break-after: always !important; 
+      page-break-inside: avoid !important;
+    }
     .no-print { display: none !important; }
   }
 `;
